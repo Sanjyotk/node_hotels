@@ -119,5 +119,31 @@ router.get('/name/:personName',async function(req,res){
 });
 
 
+router.get('/salary/:personSalary',async function(req,res){
+    try{
+        const personSal = req.params.personSalary;
+
+        const people = await Person.find();
+
+        // Extract names from each document and concatenate into a single string
+        const allSalary = people.map(x => x.salary).join(', ');
+
+        if(allSalary.includes(personSal)){
+            const response = await Person.find({salary:personSal});
+            console.log("person salary data fetched");
+            res.status(200).json(response);
+        }
+        else{
+            console.log("person salary data not available");
+            res.status(404).json({error:"enter valid salary"});
+        }
+    }
+    catch(err){
+        console.log(err + "/n ERROR:Asked page not available ");
+        res.status(500).json({error:"internal error"});
+    }
+});
+
+
 
 module.exports = router;
