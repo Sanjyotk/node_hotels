@@ -1,17 +1,26 @@
 const express = require('express');
 const router = express.Router();
 
+const bcrypt = require('bcrypt');
 const Person = require('./../models/PersonModel');
+const { generateToken, jwtAuthMiddleware } = require('../jwt');
 
-router.post('/', async (req,res)=>{
+router.post('/signup', async (req,res)=>{
     //bodyparser saves in req.body
     try{
         const data = req.body;
-        //below line can be mergered 
-        const personInstance = new Person(data);
-        const response = await personInstance.save();
+        const response = await new Person(data).save();
+        
+        const payload = {
+            id: response.id,
+            username: response.username
+        };
+
+        const token = generateToken(payload);
+        // console.log("token is:",token);
+
         console.log("Person data entered");
-        res.status(200).json(response);
+        res.status(200).json({response:response,token:token});
     }
     catch(err){
         console.log(err + "/n ERROR:Person data not entered");
@@ -19,12 +28,58 @@ router.post('/', async (req,res)=>{
     }
 });
 
-router.get('/',async (req,res)=>{
+//after signup user can login itself
+router.post('/login', async (req,res)=>{
     try{
-        const persondata = await Person.find();
+        //get the username and password from the user for first time login to generate tokens
+        const {username , password} = req.body;
+        //get the user to check if valid and used to generate tokens
+        const user = await Person.findOne({username:username});
+
+        const isMatch = await bcrypt.compare(password,user.password);
+        if(!user || !isMatch){
+            return res.status(401).json({error:"Username or Password is not matching"});
+        }
+
+        const payload = {
+            id: user.id,
+            username: user.username
+        };
+
+        const token = generateToken(payload);
+        // console.log("token is:",token);
+
+        console.log("Person logged in");
+        res.status(200).json({  token:token});
+
+    }catch(err){
+        console.log(err + "/n ERROR:Person data not entered");
+        res.status(500).json({error:"error"});
+    }
+});
+
+router.get('/', jwtAuthMiddleware,async (req,res)=>{
+    try{
+        const persondata = await Person.find().select('-password');
         console.log("person data fetched");
         // res.status(200).send(persondata);
         res.status(200).json(persondata);
+    }
+    catch(err){
+        console.log(err + "/n ERROR:Person data not available ");
+        res.status(500).json({error:"internal error"});
+    }
+});
+
+router.get('/personalProfile', jwtAuthMiddleware,async (req,res)=>{
+    try{
+        //req.user has the 4 parameters which we are sending in payload(is,username,iat,expoiry)
+        const userData = req.user;
+        //extracting user id from payload
+        const userid = userData.id;
+
+        const personData = await Person.findById(userid);
+        res.status(200).json(personData);
     }
     catch(err){
         console.log(err + "/n ERROR:Person data not available ");

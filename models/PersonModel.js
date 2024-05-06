@@ -1,4 +1,6 @@
 const mongoose = require('mongoose');
+const bcrypt = require('bcrypt');
+// const { isMatch } = require('lodash');
 
 //defining schema of my hotels database
 const personSchema = new mongoose.Schema({
@@ -26,6 +28,31 @@ const personSchema = new mongoose.Schema({
     salary:{
         type:Number,
         required: true
+    },
+    username:{
+        type:String,
+        required:true,
+        unique:true
+    },
+    password: {
+        type:String,
+        required:true,
+        unique:true
+    }
+});
+
+personSchema.pre('save', async function(next){
+
+    if(!this.isModified('password')) return next();
+
+    try {
+        const salt = await bcrypt.genSalt(10);
+        const newPassword = await bcrypt.hash(this.password,salt);
+        this.password = newPassword
+        next();    
+
+    } catch (error) {
+        return next(error);
     }
 });
 

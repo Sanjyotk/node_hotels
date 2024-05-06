@@ -1,8 +1,15 @@
 //ALL APP.USE() FUNCTIONS ARE MIDDLE WARE FUNCTIONS
+//aunthetication:Total types of members allowed to enter 
+//authorisation: Funtionalities accessable to each member
 const express = require('express');
 const app = express();
 const db = require('./db_connect');
 require('dotenv').config();
+
+//for aunthentication of users using usernames and passwords
+const passport = require('./auth');
+app.use(passport.initialize());
+const passportAuthentication = passport.authenticate('local', {session:false});
 
 //to read the data on client side and send to server
 const bodyParser = require('body-parser');
@@ -17,7 +24,7 @@ function logRequest(req,res,next){
 app.use(logRequest);
 
 //GET PUT POST DELETE PATCH
-app.get('/', function(req,res){
+app.get('/', passportAuthentication, function(req,res){
     res.send('Hello World');
 });
 
